@@ -61,11 +61,20 @@ void *handle_client(void *arg) {
             break;
         }
     }
-
-    close(client_socket);
-	
-    // 挪出客户端 
+    
+    // 准备挪出客户端 
     pthread_mutex_lock(&clients_mutex);
+    
+    //关闭连接由server_running触发，提示服务器端关闭信息 
+    if(!server_running) {
+		send(client_socket, "Server is shutting down.\n", 25, 0);
+	}
+    
+    //防止在关闭服务器端中关闭后再关闭一次 
+    if(client_count > 0) {
+		close(client_socket);
+	}
+    
     for (int i = 0; i < client_count; i++) {
         if (clients[i] == client_socket) {
             clients[i] = clients[client_count - 1];
