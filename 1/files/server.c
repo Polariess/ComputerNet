@@ -8,7 +8,7 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define MAX_CLIENTS 100
+#define MAX_CLIENTS 101
 
 int clients[MAX_CLIENTS];
 int client_count = 0;
@@ -16,10 +16,10 @@ int server_running = 1;
 pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void broadcast_message(const char *message, int sender_socket) {
-    int client_sockets[MAX_CLIENTS];  // ÁÙÊ±´æ´¢¿Í»§¶Ësocket
+    int client_sockets[MAX_CLIENTS];  // ä¸´æ—¶å­˜å‚¨å®¢æˆ·ç«¯socket
     int current_client_count;
 
-    // ¼ÓËø½ö¸´ÖÆ¿Í»§¶ËÁĞ±í£¬Ëõ¶Ì³ÖËøÊ±¼ä
+    // åŠ é”ä»…å¤åˆ¶å®¢æˆ·ç«¯åˆ—è¡¨ï¼Œç¼©çŸ­æŒé”æ—¶é—´
     pthread_mutex_lock(&clients_mutex);
     current_client_count = client_count;
     for (int i = 0; i < current_client_count; i++) {
@@ -27,15 +27,15 @@ void broadcast_message(const char *message, int sender_socket) {
     }
     pthread_mutex_unlock(&clients_mutex);
 
-    // ½âËøºó¹ã²¥ÏûÏ¢
+    // è§£é”åå¹¿æ’­æ¶ˆæ¯
 	for (int i = 0; i < current_client_count; i++) {
-	    char send_message[BUFFER_SIZE];  // ÁÙÊ±×Ö·û´®
+	    char send_message[BUFFER_SIZE];  // ä¸´æ—¶å­—ç¬¦ä¸²
 	    if (client_sockets[i] != sender_socket) {
-	        // ¶ÔÆäËû¿Í»§¶Ë·¢ËÍÏûÏ¢
+	        // å¯¹å…¶ä»–å®¢æˆ·ç«¯å‘é€æ¶ˆæ¯
 	        send(client_sockets[i], message, strlen(message), 0);
 	    }
 		else {
-	        // ¶Ô·¢ËÍÕß×Ô¼º·¢ËÍÏûÏ¢£¬Ìí¼Ó "(You)"
+	        // å¯¹å‘é€è€…è‡ªå·±å‘é€æ¶ˆæ¯ï¼Œæ·»åŠ  "(You)"
 	        snprintf(send_message, sizeof(send_message), "(You) %s", message);
 	        send(client_sockets[i], send_message, strlen(send_message), 0);
 	    }
@@ -51,26 +51,26 @@ void *handle_client(void *arg) {
     while ((n = recv(client_socket, buffer, BUFFER_SIZE, 0)) > 0 && server_running) {
         buffer[n] = '\0';
         printf("Received from client %d: %s\n", client_socket, buffer);
-
-        // ¹ã²¥ĞÅÏ¢µ½³ı·¢ËÍÕßÖ®ÍâµÄËùÓĞ¿Í»§¶Ë 
-        broadcast_message(buffer, client_socket);
-
-        // ¼ì²éÍË³öĞÅÏ¢ 
+        
+		// æ£€æŸ¥é€€å‡ºä¿¡æ¯,ä¸”ä¸å¹¿æ’­ 
         if (strcmp(buffer, "quit") == 0) {
             printf("Client %d requested to quit.\n", client_socket);
             break;
         }
+        
+        // å¹¿æ’­ä¿¡æ¯åˆ°é™¤å‘é€è€…ä¹‹å¤–çš„æ‰€æœ‰å®¢æˆ·ç«¯ 
+        broadcast_message(buffer, client_socket);
     }
     
-    // ×¼±¸Å²³ö¿Í»§¶Ë 
+    // å‡†å¤‡æŒªå‡ºå®¢æˆ·ç«¯ 
     pthread_mutex_lock(&clients_mutex);
     
-    //¹Ø±ÕÁ¬½ÓÓÉserver_running´¥·¢£¬ÌáÊ¾·şÎñÆ÷¶Ë¹Ø±ÕĞÅÏ¢ 
+    //å…³é—­è¿æ¥ç”±server_runningè§¦å‘ï¼Œæç¤ºå®¢æˆ·ç«¯å…³é—­ä¿¡æ¯ 
     if(!server_running) {
 		send(client_socket, "Server is shutting down.\n", 25, 0);
 	}
     
-    //·ÀÖ¹ÔÚ¹Ø±Õ·şÎñÆ÷¶ËÖĞ¹Ø±ÕºóÔÙ¹Ø±ÕÒ»´Î 
+    //é˜²æ­¢åœ¨å…³é—­æœåŠ¡å™¨ç«¯ä¸­å…³é—­åå†å…³é—­ä¸€æ¬¡ 
     if(client_count > 0) {
 		close(client_socket);
 	}
@@ -97,9 +97,9 @@ void *command_interface(void *arg) {
         if (strncmp(command, "quit", 4) == 0) {
             printf("Shutting down server...\n");
             server_running = 0;
-            //¹Ø±Õ·şÎñÆ÷£ºÉèserver_running = 0 
+            //å…³é—­æœåŠ¡å™¨ï¼šè®¾server_running = 0 
 			
-			//ĞÂ½¨ĞéÄâclient£¬Ïòserver·¢ÆğĞé¼ÙµÄÁ¬½ÓÇëÇó£¬½«Ö÷Ïß³Ì×èÈû¹ı³ÌÌø¹ı
+			//æ–°å»ºè™šæ‹Ÿclientï¼Œå‘serverå‘èµ·è™šå‡çš„è¿æ¥è¯·æ±‚ï¼Œå°†ä¸»çº¿ç¨‹é˜»å¡è¿‡ç¨‹è·³è¿‡
 			struct sockaddr_in server_addr;
 			server_addr.sin_family = AF_INET;
     		server_addr.sin_port = htons(PORT);
@@ -108,12 +108,11 @@ void *command_interface(void *arg) {
     		int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     		
     		if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        		perror("Connection to server failed");
         		close(client_socket);
-        		exit(EXIT_FAILURE);
+        		//å°±ç®—è¿æ¥å¤±è´¥ï¼Œè¿æ¥è¯·æ±‚å·²ç»å‘è¿‡å»ï¼Œä»ç„¶èƒ½è®©runningæ–­å¼€
     		}
 			
-			//½¨Á¢ĞéÄâÁ¬½ÓºóÊ²Ã´¶¼²»ĞèÒª×ö£¬ÈÃÖ÷Ïß³Ì×Ô¼ºÈ¥´´½¨ĞÂÏß³Ì¡¢Å² 
+			//å»ºç«‹è™šæ‹Ÿè¿æ¥åä»€ä¹ˆéƒ½ä¸éœ€è¦åšï¼Œè®©ä¸»çº¿ç¨‹è‡ªå·±å»åˆ›å»ºæ–°çº¿ç¨‹ã€æŒªclients 
 		    
             break;
         } 
@@ -166,7 +165,7 @@ int main() {
 
     printf("Server listening on port %d\n", PORT);
 
-    // Æô¶¯ÃüÁîĞĞ½çÃæÏß³Ì
+    // å¯åŠ¨å‘½ä»¤è¡Œç•Œé¢çº¿ç¨‹
     pthread_create(&cmd_tid, NULL, command_interface, NULL);
 
     while (server_running) {
@@ -180,10 +179,11 @@ int main() {
             free(new_socket);
             continue;
         }
-		
         // Add new client to the list
         pthread_mutex_lock(&clients_mutex);
-        if (client_count < MAX_CLIENTS) {
+        
+        //ç•™ä¸€ä¸ªclintsç”¨æ¥å¤„ç†å…³é—­è¯·æ±‚ 
+        if (client_count < MAX_CLIENTS - 1) {
             clients[client_count++] = *new_socket;
             printf("New connection accepted: client %d\n", *new_socket);
             pthread_create(&tid, NULL, handle_client, new_socket);
@@ -197,10 +197,10 @@ int main() {
         pthread_mutex_unlock(&clients_mutex);
     }
 
-    // µÈ´ıÃüÁîĞĞÏß³Ì½áÊø
+    // ç­‰å¾…å‘½ä»¤è¡Œçº¿ç¨‹ç»“æŸ
     pthread_join(cmd_tid, NULL);
 
-    // ¹Ø±Õ·şÎñÆ÷
+    // å…³é—­æœåŠ¡å™¨
     shutdown_server(server_socket);
 
     return 0;
